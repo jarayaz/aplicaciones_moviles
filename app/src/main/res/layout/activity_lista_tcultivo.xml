@@ -33,10 +33,10 @@
         app:layout_constraintTop_toBottomOf="@id/resultCard">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonGuardar"
+            android:id="@+id/buttonNuevaCosecha"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/button_save"
+            android:text="@string/button_new_harvest"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/button_start"/>
 
@@ -45,14 +45,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/button_results"
-            android:layout_marginBottom="8dp"
-            android:backgroundTint="@color/button_start"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonBorrar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/button_delete"
             android:layout_marginBottom="8dp"
             android:backgroundTint="@color/button_start"/>
 

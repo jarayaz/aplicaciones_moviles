@@ -5,11 +5,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import java.util.Map;
 
 public class ListaTCultivoActivity extends AppCompatActivity {
 
@@ -17,9 +14,8 @@ public class ListaTCultivoActivity extends AppCompatActivity {
     private String cultivoSeleccionado;
     private String fechaCosecha;
     private TextView texto;
-    private Button buttonGuardar;
+    private Button buttonNuevaCosecha;
     private Button buttonResultados;
-    private Button buttonBorrar;
     private Button buttonVolver;
 
     @Override
@@ -37,48 +33,38 @@ public class ListaTCultivoActivity extends AppCompatActivity {
 
         // Inicializar vistas
         texto = findViewById(R.id.textView);
-        buttonGuardar = findViewById(R.id.buttonGuardar);
+        buttonNuevaCosecha = findViewById(R.id.buttonNuevaCosecha);
         buttonResultados = findViewById(R.id.buttonResultados);
-        buttonBorrar = findViewById(R.id.buttonBorrar);
         buttonVolver = findViewById(R.id.buttonVolver);
 
         // Mostrar el cultivo seleccionado y su fecha de cosecha
         texto.setText(cultivoSeleccionado + ": " + fechaCosecha);
 
         // Configurar listeners
-        buttonGuardar.setOnClickListener(v -> guardarCultivo());
+        buttonNuevaCosecha.setOnClickListener(v -> agregarNuevaCosecha());
         buttonResultados.setOnClickListener(v -> mostrarResultados());
-        buttonBorrar.setOnClickListener(v -> borrarCultivos());
-        buttonVolver.setOnClickListener(v -> finish());
+        buttonVolver.setOnClickListener(v -> volverAMain());
     }
 
-    private void guardarCultivo() {
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putString("Cultivo_" + cultivoSeleccionado, fechaCosecha);
-        editor.apply();
-        Toast.makeText(this, "Cultivo guardado exitosamente", Toast.LENGTH_SHORT).show();
+    private void agregarNuevaCosecha() {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
     }
 
     private void mostrarResultados() {
-        Map<String, ?> cultivosGuardados = prefs.getAll();
-        if (cultivosGuardados.isEmpty()) {
-            texto.setText("No hay cultivos registrados");
-        } else {
-            StringBuilder resultados = new StringBuilder();
-            for (Map.Entry<String, ?> entry : cultivosGuardados.entrySet()) {
-                String nombreCultivo = entry.getKey().replace("Cultivo_", "");
-                String fecha = entry.getValue().toString();
-                resultados.append(nombreCultivo).append(": ").append(fecha).append("\n");
-            }
-            texto.setText(resultados.toString());
-        }
+        Intent intent = new Intent(this, ResultsActivity.class);
+        startActivity(intent);
     }
 
-    private void borrarCultivos() {
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.clear();
-        editor.apply();
-        texto.setText("No hay cultivos registrados");
-        Toast.makeText(this, "Todos los cultivos han sido borrados", Toast.LENGTH_SHORT).show();
+    private void volverAMain() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    public void onBackPressed() {
+        volverAMain();
     }
 }

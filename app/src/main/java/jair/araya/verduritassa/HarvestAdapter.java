@@ -11,13 +11,13 @@ import java.util.ArrayList;
 
 public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestViewHolder> {
     private ArrayList<Harvest> harvests;
-    private OnSettingsClickListener listener;
+    private OnHarvestClickListener listener;
 
-    public interface OnSettingsClickListener {
-        void onSettingsClick(Harvest harvest);
+    public interface OnHarvestClickListener {
+        void onMenuClick(View view, Harvest harvest);
     }
 
-    public HarvestAdapter(ArrayList<Harvest> harvests, OnSettingsClickListener listener) {
+    public HarvestAdapter(ArrayList<Harvest> harvests, OnHarvestClickListener listener) {
         this.harvests = harvests;
         this.listener = listener;
     }
@@ -35,7 +35,11 @@ public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestV
         Harvest harvest = harvests.get(position);
         holder.cropName.setText(harvest.getCropName());
         holder.harvestDate.setText(harvest.getHarvestDate());
-        holder.settingsButton.setOnClickListener(v -> listener.onSettingsClick(harvest));
+        holder.menuButton.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onMenuClick(holder.menuButton, harvest);
+            }
+        });
     }
 
     @Override
@@ -54,13 +58,13 @@ public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestV
     static class HarvestViewHolder extends RecyclerView.ViewHolder {
         TextView cropName;
         TextView harvestDate;
-        ImageButton settingsButton;
+        ImageButton menuButton;
 
         HarvestViewHolder(View itemView) {
             super(itemView);
             cropName = itemView.findViewById(R.id.cropName);
             harvestDate = itemView.findViewById(R.id.harvestDate);
-            settingsButton = itemView.findViewById(R.id.settingsButton);
+            menuButton = itemView.findViewById(R.id.menuButton);
         }
     }
 }
