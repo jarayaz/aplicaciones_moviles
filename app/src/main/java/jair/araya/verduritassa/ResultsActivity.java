@@ -1,8 +1,8 @@
 package jair.araya.verduritassa;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,33 +13,65 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 public class ResultsActivity extends AppCompatActivity implements HarvestAdapter.OnHarvestClickListener {
+    private static final String TAG = "ResultsActivity";
     private RecyclerView harvestList;
     private HarvestAdapter adapter;
-    private SharedPreferences prefs;
     private TextView welcomeText;
     private MaterialButton deleteAllButton;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private ArrayList<Harvest> harvests;
+    private ListenerRegistration harvestListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_results);
 
-        mAuth = FirebaseAuth.getInstance();
-        prefs = getSharedPreferences("Cultivos", MODE_PRIVATE);
-        harvestList = findViewById(R.id.harvestList);
+        initializeViews();
+        setupFirebase();
+        setupRecyclerView();
+        loadHarvests();
+
         FloatingActionButton addButton = findViewById(R.id.addButton);
+        addButton.setOnClickListener(v -> {
+            Intent intent = new Intent(ResultsActivity.this, MainActivity.class);
+            startActivity(intent);
+        });
+
+        deleteAllButton.setOnClickListener(v -> confirmDeleteAll());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (harvestListener != null) {
+            harvestListener.remove();
+        }
+    }
+
+    private void initializeViews() {
+        harvestList = findViewById(R.id.harvestList);
         welcomeText = findViewById(R.id.welcomeText);
         deleteAllButton = findViewById(R.id.deleteAllButton);
+    }
+
+    private void setupFirebase() {
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
@@ -48,18 +80,60 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
                 userName = currentUser.getEmail();
             }
             welcomeText.setText(getString(R.string.welcome_message, userName));
+        } else {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+    }
+
+    private void setupRecyclerView() {
+        harvests = new ArrayList<>();
+        adapter = new HarvestAdapter(harvests, this);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        harvestList.setLayoutManager(layoutManager);
+        harvestList.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+        harvestList.setAdapter(adapter);
+        harvestList.setHasFixedSize(true);
+    }
+
+    private void loadHarvests() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            Log.d(TAG, "No user logged in");
+            return;
         }
 
-        harvestList.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new HarvestAdapter(loadHarvests(), this);
-        harvestList.setAdapter(adapter);
+        if (harvestListener != null) {
+            harvestListener.remove();
+        }
 
-        addButton.setOnClickListener(v -> {
-            Intent intent = new Intent(ResultsActivity.this, MainActivity.class);
-            startActivity(intent);
-        });
+        harvestListener = db.collection("harvests")
+                .whereEqualTo("userId", user.getUid())
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Error loading harvests", error);
+                        return;
+                    }
 
-        deleteAllButton.setOnClickListener(v -> confirmDeleteAll());
+                    if (value != null && !value.isEmpty()) {
+                        harvests.clear();
+                        for (QueryDocumentSnapshot document : value) {
+                            String id = document.getId();
+                            String cropName = document.getString("cropName");
+                            String harvestDate = document.getString("harvestDate");
+
+                            if (cropName != null && harvestDate != null) {
+                                harvests.add(new Harvest(id, cropName, harvestDate));
+                            }
+                        }
+                        adapter.notifyDataSetChanged();
+                    } else {
+                        harvests.clear();
+                        adapter.notifyDataSetChanged();
+                    }
+                });
     }
 
     @Override
@@ -71,6 +145,9 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_logout) {
+            if (harvestListener != null) {
+                harvestListener.remove();
+            }
             mAuth.signOut();
             Intent intent = new Intent(ResultsActivity.this, LoginActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -78,23 +155,6 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private ArrayList<Harvest> loadHarvests() {
-        ArrayList<Harvest> harvests = new ArrayList<>();
-        Map<String, ?> allHarvests = prefs.getAll();
-
-        for (Map.Entry<String, ?> entry : allHarvests.entrySet()) {
-            String[] parts = entry.getKey().split("_");
-            if (parts.length >= 3) {
-                String cropName = parts[1];
-                String id = parts[2];
-                String harvestDate = entry.getValue().toString();
-                harvests.add(new Harvest(id, cropName, harvestDate));
-            }
-        }
-
-        return harvests;
     }
 
     @Override
@@ -144,23 +204,33 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
     }
 
     private void deleteHarvest(Harvest harvest) {
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.remove("Cultivo_" + harvest.getCropName() + "_" + harvest.getId());
-        editor.apply();
-        adapter.removeHarvest(harvest);
-
-        if (adapter.getItemCount() == 0) {
-            Toast.makeText(this, R.string.no_crops, Toast.LENGTH_SHORT).show();
-        }
+        db.collection("harvests")
+                .document(harvest.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    adapter.removeHarvest(harvest);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error deleting harvest", e);
+                });
     }
 
     private void deleteAllHarvests() {
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.clear();
-        editor.apply();
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
 
-        recreate();
-
-        Toast.makeText(this, R.string.crops_deleted, Toast.LENGTH_SHORT).show();
+        db.collection("harvests")
+                .whereEqualTo("userId", user.getUid())
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        doc.getReference().delete();
+                    }
+                    harvests.clear();
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error deleting all harvests", e);
+                });
     }
 }

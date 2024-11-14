@@ -81,6 +81,15 @@
             android:layout_height="wrap_content"
             android:background="@drawable/button_background"
             android:text="@string/btn_register"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_background"
+            android:text="@string/button_back"
             android:textColor="#FFFFFF" />
 
     </LinearLayout>

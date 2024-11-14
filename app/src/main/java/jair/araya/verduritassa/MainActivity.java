@@ -17,29 +17,21 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
     private boolean editMode = false;
     private String editCropName;
     private String editHarvestDate;
     private String editId;
-
-    private int getDiasParaCosecha(String cultivo) {
-        switch (cultivo) {
-            case "Tomates (80 días hasta la cosecha)": return 80;
-            case "Cebollas (120 días hasta la cosecha)": return 120;
-            case "Lechugas (60 días hasta la cosecha)": return 60;
-            case "Apio (85 días hasta la cosecha)": return 85;
-            case "Choclo (90 días hasta la cosecha)": return 90;
-            default: return 0;
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
@@ -55,9 +48,8 @@ public class MainActivity extends AppCompatActivity {
             if (userName == null || userName.isEmpty()) {
                 userName = currentUser.getEmail();
             }
-            String welcomeMessage = getString(R.string.welcome_message, userName);
             if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle(welcomeMessage);
+                getSupportActionBar().setTitle(getString(R.string.welcome_message, userName));
             }
         }
 
@@ -115,50 +107,77 @@ public class MainActivity extends AppCompatActivity {
                     (calendar.get(Calendar.MONTH) + 1) + "/" +
                     calendar.get(Calendar.YEAR);
 
-            Map<String, ?> cosechas = getSharedPreferences("Cultivos", MODE_PRIVATE).getAll();
-            boolean cosechaExistente = false;
-
-            // Verificar si existe una cosecha exactamente igual (mismo cultivo y fecha)
-            for (Map.Entry<String, ?> entry : cosechas.entrySet()) {
-                String[] parts = entry.getKey().split("_");
-                if (parts.length >= 3) {
-                    String cropName = parts[1];
-                    String harvestDate = entry.getValue().toString();
-                    if (cropName.equals(cultivoSeleccionado) && harvestDate.equals(fechaCosecha)) {
-                        cosechaExistente = true;
-                        break;
-                    }
-                }
-            }
-
-            if (cosechaExistente && !editMode) {
-                Toast.makeText(MainActivity.this, R.string.duplicate_harvest, Toast.LENGTH_LONG).show();
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user == null) {
+                Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            String harvestId;
-            if (editMode) {
-                harvestId = editId;
-                // Eliminar la entrada anterior
-                getSharedPreferences("Cultivos", MODE_PRIVATE).edit()
-                        .remove("Cultivo_" + editCropName + "_" + editId)
-                        .apply();
-            } else {
-                harvestId = UUID.randomUUID().toString();
+            String userName = user.getDisplayName();
+            if (userName == null || userName.isEmpty()) {
+                userName = user.getEmail();
             }
 
-            // Guardar la nueva entrada con ID único
-            getSharedPreferences("Cultivos", MODE_PRIVATE).edit()
-                    .putString("Cultivo_" + cultivoSeleccionado + "_" + harvestId, fechaCosecha)
-                    .apply();
+            Map<String, Object> harvest = new HashMap<>();
+            harvest.put("userId", user.getUid());
+            harvest.put("userName", userName);  // Agregamos el nombre de usuario
+            harvest.put("cropName", cultivoSeleccionado);
+            harvest.put("harvestDate", fechaCosecha);
+            harvest.put("plantingDate", day + "/" + (month + 1) + "/" + year);
+            harvest.put("timestamp", Calendar.getInstance().getTimeInMillis());
 
-            String mensaje = editMode ? getString(R.string.harvest_updated) : getString(R.string.crop_registered);
-            Toast.makeText(MainActivity.this, mensaje, Toast.LENGTH_SHORT).show();
-
-            Intent listIntent = new Intent(MainActivity.this, ListaTCultivoActivity.class);
-            listIntent.putExtra("cultivo_seleccionado", cultivoSeleccionado);
-            startActivity(listIntent);
+            // Verificar si ya existe una cosecha igual
+            db.collection("harvests")
+                    .whereEqualTo("userId", user.getUid())
+                    .whereEqualTo("cropName", cultivoSeleccionado)
+                    .whereEqualTo("harvestDate", fechaCosecha)
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                        if (!queryDocumentSnapshots.isEmpty() && !editMode) {
+                            Toast.makeText(MainActivity.this, R.string.duplicate_harvest, Toast.LENGTH_SHORT).show();
+                        } else {
+                            // Guardar en Firestore
+                            if (editMode && editId != null) {
+                                db.collection("harvests")
+                                        .document(editId)
+                                        .set(harvest, SetOptions.merge())
+                                        .addOnSuccessListener(aVoid -> {
+                                            Toast.makeText(MainActivity.this, R.string.harvest_updated, Toast.LENGTH_SHORT).show();
+                                            startActivity(new Intent(MainActivity.this, ResultsActivity.class));
+                                            finish();
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Toast.makeText(MainActivity.this, "Error al actualizar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        });
+                            } else {
+                                db.collection("harvests")
+                                        .add(harvest)
+                                        .addOnSuccessListener(documentReference -> {
+                                            Toast.makeText(MainActivity.this, R.string.crop_registered, Toast.LENGTH_SHORT).show();
+                                            startActivity(new Intent(MainActivity.this, ResultsActivity.class));
+                                            finish();
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Toast.makeText(MainActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        });
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(MainActivity.this, "Error al verificar duplicados: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
         });
+    }
+
+    private int getDiasParaCosecha(String cultivo) {
+        switch (cultivo) {
+            case "Tomates (80 días hasta la cosecha)": return 80;
+            case "Cebollas (120 días hasta la cosecha)": return 120;
+            case "Lechugas (60 días hasta la cosecha)": return 60;
+            case "Apio (85 días hasta la cosecha)": return 85;
+            case "Choclo (90 días hasta la cosecha)": return 90;
+            default: return 0;
+        }
     }
 
     @Override

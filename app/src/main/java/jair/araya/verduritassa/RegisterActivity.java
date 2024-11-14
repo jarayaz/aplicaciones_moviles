@@ -10,6 +10,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class RegisterActivity extends AppCompatActivity {
     private EditText emailEditText;
@@ -18,15 +22,18 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText genderEditText;
     private EditText passwordEditText;
     private Button registerButton;
+    private Button backButton;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // Inicializar Firebase Auth
+        // Inicializar Firebase Auth y Firestore
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         // Inicializar vistas
         emailEditText = findViewById(R.id.emailEditText);
@@ -35,6 +42,7 @@ public class RegisterActivity extends AppCompatActivity {
         genderEditText = findViewById(R.id.genderEditText);
         passwordEditText = findViewById(R.id.passwordEditText);
         registerButton = findViewById(R.id.registerButton);
+        backButton = findViewById(R.id.backButton);
 
         // Configurar click listener para el botón de registro
         registerButton.setOnClickListener(v -> {
@@ -63,11 +71,30 @@ public class RegisterActivity extends AppCompatActivity {
                             mAuth.getCurrentUser().updateProfile(profileUpdates)
                                     .addOnCompleteListener(updateTask -> {
                                         if (updateTask.isSuccessful()) {
-                                            Toast.makeText(RegisterActivity.this,
-                                                    "Registro exitoso", Toast.LENGTH_SHORT).show();
-                                            Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
-                                            startActivity(intent);
-                                            finish();
+                                            // Guardar datos adicionales en Firestore
+                                            String userId = mAuth.getCurrentUser().getUid();
+                                            Map<String, Object> user = new HashMap<>();
+                                            user.put("email", email);
+                                            user.put("nombre", name);
+                                            user.put("pais", country);
+                                            user.put("genero", gender);
+
+                                            db.collection("usuarios")
+                                                    .document(userId)
+                                                    .set(user)
+                                                    .addOnSuccessListener(aVoid -> {
+                                                        Toast.makeText(RegisterActivity.this,
+                                                                "Registro exitoso", Toast.LENGTH_SHORT).show();
+                                                        Intent intent = new Intent(RegisterActivity.this, ListaTCultivoActivity.class);
+                                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                        startActivity(intent);
+                                                        finish();
+                                                    })
+                                                    .addOnFailureListener(e -> {
+                                                        Toast.makeText(RegisterActivity.this,
+                                                                "Error al guardar datos: " + e.getMessage(),
+                                                                Toast.LENGTH_SHORT).show();
+                                                    });
                                         }
                                     });
                         } else {
@@ -76,6 +103,11 @@ public class RegisterActivity extends AppCompatActivity {
                                     Toast.LENGTH_SHORT).show();
                         }
                     });
+        });
+
+        // Configurar click listener para el botón de volver
+        backButton.setOnClickListener(v -> {
+            finish(); // Esto volverá a la actividad anterior (LoginActivity)
         });
     }
 }

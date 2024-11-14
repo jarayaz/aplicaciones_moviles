@@ -7,17 +7,17 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import java.util.ArrayList;
+import java.util.List;
 
 public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestViewHolder> {
-    private ArrayList<Harvest> harvests;
+    private List<Harvest> harvests;
     private OnHarvestClickListener listener;
 
     public interface OnHarvestClickListener {
         void onMenuClick(View view, Harvest harvest);
     }
 
-    public HarvestAdapter(ArrayList<Harvest> harvests, OnHarvestClickListener listener) {
+    public HarvestAdapter(List<Harvest> harvests, OnHarvestClickListener listener) {
         this.harvests = harvests;
         this.listener = listener;
     }
@@ -32,19 +32,17 @@ public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestV
 
     @Override
     public void onBindViewHolder(@NonNull HarvestViewHolder holder, int position) {
-        Harvest harvest = harvests.get(position);
-        holder.cropName.setText(harvest.getCropName());
-        holder.harvestDate.setText(harvest.getHarvestDate());
-        holder.menuButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onMenuClick(holder.menuButton, harvest);
-            }
-        });
+        holder.bind(harvests.get(position), listener);
     }
 
     @Override
     public int getItemCount() {
-        return harvests.size();
+        return harvests != null ? harvests.size() : 0;
+    }
+
+    public void updateHarvests(List<Harvest> newHarvests) {
+        this.harvests = newHarvests;
+        notifyDataSetChanged();
     }
 
     public void removeHarvest(Harvest harvest) {
@@ -56,15 +54,24 @@ public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestV
     }
 
     static class HarvestViewHolder extends RecyclerView.ViewHolder {
-        TextView cropName;
-        TextView harvestDate;
-        ImageButton menuButton;
+        private final TextView cropName;
+        private final TextView harvestDate;
+        private final ImageButton menuButton;
 
         HarvestViewHolder(View itemView) {
             super(itemView);
             cropName = itemView.findViewById(R.id.cropName);
             harvestDate = itemView.findViewById(R.id.harvestDate);
             menuButton = itemView.findViewById(R.id.menuButton);
+        }
+
+        void bind(final Harvest harvest, final OnHarvestClickListener listener) {
+            cropName.setText(harvest.getCropName());
+            harvestDate.setText(harvest.getHarvestDate());
+
+            if (listener != null) {
+                menuButton.setOnClickListener(v -> listener.onMenuClick(menuButton, harvest));
+            }
         }
     }
 }

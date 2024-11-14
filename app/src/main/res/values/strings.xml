@@ -20,6 +20,8 @@
     <string name="no">No</string>
     <string name="harvest_updated">Cosecha actualizada exitosamente</string>
     <string name="duplicate_harvest">Esta cosecha ya existe para esta fecha. Por favor elige otra fecha.</string>
+    <string name="todays_harvests">Tus Cosechas de Hoy</string>
+    <string name="all_harvests">Tus Cosechas</string>
 
     <!-- Strings para registro -->
     <string name="hint_email">Correo electrónico</string>
