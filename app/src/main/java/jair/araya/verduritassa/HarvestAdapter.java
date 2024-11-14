@@ -66,7 +66,7 @@ public class HarvestAdapter extends RecyclerView.Adapter<HarvestAdapter.HarvestV
         }
 
         void bind(final Harvest harvest, final OnHarvestClickListener listener) {
-            cropName.setText(harvest.getCropName());
+            cropName.setText(harvest.getDisplayName());
             harvestDate.setText(harvest.getHarvestDate());
 
             if (listener != null) {

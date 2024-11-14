@@ -85,7 +85,8 @@ public class RegisterActivity extends AppCompatActivity {
                                                     .addOnSuccessListener(aVoid -> {
                                                         Toast.makeText(RegisterActivity.this,
                                                                 "Registro exitoso", Toast.LENGTH_SHORT).show();
-                                                        Intent intent = new Intent(RegisterActivity.this, ListaTCultivoActivity.class);
+                                                        // Redirigir a ResultsActivity después del registro
+                                                        Intent intent = new Intent(RegisterActivity.this, ResultsActivity.class);
                                                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                                                         startActivity(intent);
                                                         finish();

@@ -6,6 +6,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private String editCropName;
     private String editHarvestDate;
     private String editId;
+    private String editAlias;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
         Spinner tipos_de_cultivos = findViewById(R.id.spinner);
         DatePicker fechaCultivo = findViewById(R.id.datePicker);
+        EditText aliasEditText = findViewById(R.id.aliasEditText);
         Button siguiente = findViewById(R.id.button);
 
         editMode = getIntent().getBooleanExtra("edit_mode", false);
@@ -68,12 +71,17 @@ public class MainActivity extends AppCompatActivity {
             editCropName = getIntent().getStringExtra("crop_name");
             editHarvestDate = getIntent().getStringExtra("harvest_date");
             editId = getIntent().getStringExtra("harvest_id");
+            editAlias = getIntent().getStringExtra("alias");
 
             for (int i = 0; i < tipos_de_cultivos.getCount(); i++) {
                 if (tipos_de_cultivos.getItemAtPosition(i).toString().equals(editCropName)) {
                     tipos_de_cultivos.setSelection(i);
                     break;
                 }
+            }
+
+            if (editAlias != null) {
+                aliasEditText.setText(editAlias);
             }
 
             try {
@@ -93,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
 
         siguiente.setOnClickListener(view -> {
             String cultivoSeleccionado = tipos_de_cultivos.getSelectedItem().toString();
+            String alias = aliasEditText.getText().toString().trim();
             int diasParaCosecha = getDiasParaCosecha(cultivoSeleccionado);
 
             int day = fechaCultivo.getDayOfMonth();
@@ -120,11 +129,14 @@ public class MainActivity extends AppCompatActivity {
 
             Map<String, Object> harvest = new HashMap<>();
             harvest.put("userId", user.getUid());
-            harvest.put("userName", userName);  // Agregamos el nombre de usuario
+            harvest.put("userName", userName);
             harvest.put("cropName", cultivoSeleccionado);
             harvest.put("harvestDate", fechaCosecha);
             harvest.put("plantingDate", day + "/" + (month + 1) + "/" + year);
             harvest.put("timestamp", Calendar.getInstance().getTimeInMillis());
+            if (!alias.isEmpty()) {
+                harvest.put("alias", alias);
+            }
 
             // Verificar si ya existe una cosecha igual
             db.collection("harvests")

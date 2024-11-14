@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">VerduritasSAPP</string>
     <string name="hint_date">Selecciona una fecha</string>
+    <string name="hint_alias">Alias del cultivo (opcional)</string>
     <string name="button_next">Guardar cosecha</string>
     <string name="button_save">Guardar</string>
     <string name="button_results">Resultados</string>

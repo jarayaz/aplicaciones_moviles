@@ -105,8 +105,9 @@ public class ListaTCultivoActivity extends AppCompatActivity implements HarvestA
                         String id = doc.getId();
                         String cropName = doc.getString("cropName");
                         String harvestDate = doc.getString("harvestDate");
+                        String alias = doc.getString("alias");
                         if (cropName != null && harvestDate != null) {
-                            harvests.add(new Harvest(id, cropName, harvestDate));
+                            harvests.add(new Harvest(id, cropName, harvestDate, alias));
                         }
                     }
                     adapter.notifyDataSetChanged();

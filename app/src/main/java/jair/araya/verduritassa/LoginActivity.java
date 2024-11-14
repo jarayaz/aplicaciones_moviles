@@ -61,8 +61,8 @@ public class LoginActivity extends AppCompatActivity {
             mAuth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(this, task -> {
                         if (task.isSuccessful()) {
-                            // Inicio de sesión exitoso
-                            Intent intent = new Intent(LoginActivity.this, ListaTCultivoActivity.class);
+                            // Inicio de sesión exitoso - Redirigir a ResultsActivity
+                            Intent intent = new Intent(LoginActivity.this, ResultsActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             startActivity(intent);
                             finish();
@@ -94,8 +94,8 @@ public class LoginActivity extends AppCompatActivity {
         if (requestCode == RC_SIGN_IN) {
             GoogleSignIn.getSignedInAccountFromIntent(data)
                     .addOnSuccessListener(account -> {
-                        // Inicio de sesión con Google exitoso
-                        Intent intent = new Intent(LoginActivity.this, ListaTCultivoActivity.class);
+                        // Inicio de sesión con Google exitoso - Redirigir a ResultsActivity
+                        Intent intent = new Intent(LoginActivity.this, ResultsActivity.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
                         finish();

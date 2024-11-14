@@ -123,9 +123,10 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
                             String id = document.getId();
                             String cropName = document.getString("cropName");
                             String harvestDate = document.getString("harvestDate");
+                            String alias = document.getString("alias");
 
                             if (cropName != null && harvestDate != null) {
-                                harvests.add(new Harvest(id, cropName, harvestDate));
+                                harvests.add(new Harvest(id, cropName, harvestDate, alias));
                             }
                         }
                         adapter.notifyDataSetChanged();
@@ -182,6 +183,7 @@ public class ResultsActivity extends AppCompatActivity implements HarvestAdapter
         intent.putExtra("crop_name", harvest.getCropName());
         intent.putExtra("harvest_date", harvest.getHarvestDate());
         intent.putExtra("harvest_id", harvest.getId());
+        intent.putExtra("alias", harvest.getAlias());
         startActivity(intent);
     }
 
